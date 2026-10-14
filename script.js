@@ -1,4 +1,4 @@
-const API_URL = "https://tu-nombre-de-servicio.onrender.com";
+const API_URL = "https://ecopickled-sga.onrender.com";
 let perfilActual = 'admin';
 let idOperarioActual = 1;
 let itemsLoteActual = [];
