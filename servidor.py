@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import sqlite3
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -13,6 +14,62 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def inicializar_bd_si_no_existe():
+    conn = sqlite3.connect("almacen.db")
+    cursor = conn.cursor()
+    
+    # Comprobar si la tabla operarios ya existe
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='operarios'")
+    tabla_existe = cursor.fetchone()
+    
+    if not tabla_existe:
+        cursor.execute("""
+            CREATE TABLE productos (
+                id_producto INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre_producto TEXT NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE almacen_ubicaciones (
+                id_almacen INTEGER PRIMARY KEY AUTOINCREMENT,
+                producto_id INTEGER,
+                estanteria TEXT NOT NULL,
+                fila INTEGER NOT NULL,
+                columna INTEGER NOT NULL,
+                cantidad INTEGER NOT NULL,
+                FOREIGN KEY (producto_id) REFERENCES productos (id_producto)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE operarios (
+                id_operario INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                rol TEXT NOT NULL,
+                password TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE operarios_tareas (
+                id_tarea INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_operario INTEGER,
+                id_almacen INTEGER,
+                cantidad_a_buscar INTEGER NOT NULL,
+                estado_tarea TEXT DEFAULT 'Pendiente',
+                nota TEXT,
+                id_lote TEXT DEFAULT 'Individual',
+                FOREIGN KEY (id_operario) REFERENCES operarios (id_operario),
+                FOREIGN KEY (id_almacen) REFERENCES almacen_ubicaciones (id_almacen)
+            )
+        """)
+        cursor.execute("INSERT INTO operarios (id_operario, nombre, rol, password) VALUES (0, 'Administrador', 'Admin', 'admin123')")
+        cursor.execute("INSERT INTO operarios (id_operario, nombre, rol, password) VALUES (1, 'JuanT', 'Operario', NULL)")
+        cursor.execute("INSERT INTO operarios (id_operario, nombre, rol, password) VALUES (2, 'ManuelG', 'Operario', NULL)")
+        conn.commit()
+    conn.close()
+
+# Ejecutar la verificación e inicialización al arrancar el servidor
+inicializar_bd_si_no_existe()
 
 def obtener_conexion():
     conn = sqlite3.connect("almacen.db")
@@ -205,6 +262,7 @@ def completar_tarea(id_tarea: int):
     conn.close()
     return {"mensaje": "Tarea completada y stock actualizado", "alerta_cierre": mensaje_cierre}
 
+@cache = None # solo referencia
 @app.post("/api/operario/completar-parcial/{id_tarea}")
 def completar_tarea_parcial(id_tarea: int, datos: TareaIncompleta):
     conn = obtener_conexion()
@@ -228,13 +286,7 @@ def completar_tarea_parcial(id_tarea: int, datos: TareaIncompleta):
     conn.close()
     return {"mensaje": "Extracción parcial registrada con incidencia", "alerta_cierre": mensaje_cierre}
 
-import os
-
-# ... (todo tu código de FastAPI, endpoints, base de datos, etc.) ...
-
 if __name__ == "__main__":
     import uvicorn
-    # Render asigna un puerto dinámico en la variable de entorno PORT. 
-    # Si no existe (estamos en local), usamos el puerto 8000 por defecto.
     puerto = int(os.environ.get("PORT", 8000))
     uvicorn.run("servidor:app", host="0.0.0.0", port=puerto)
