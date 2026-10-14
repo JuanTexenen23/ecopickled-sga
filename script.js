@@ -128,7 +128,10 @@ async function cargarInventario() {
                     <td class="py-2.5 px-3 font-semibold text-white">${item.nombre_producto}</td>
                     <td class="py-2.5 px-3 font-mono text-slate-300">Est. ${item.estanteria} (F:${item.fila}, C:${item.columna})</td>
                     <td class="py-2.5 px-3 font-bold text-sky-400">${item.cantidad} u.</td>
-                    <td class="py-2.5 px-3 text-right">
+                    <td class="py-2.5 px-3 text-right space-x-2">
+                        <button onclick="activarLED('${item.estanteria}', ${item.fila}, ${item.columna})" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 rounded-lg text-xs font-bold transition-all" title="Encender LED físico">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </button>
                         <button onclick="eliminarUbicacion(${item.id_almacen})" class="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-lg text-xs font-bold transition-all">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -166,7 +169,10 @@ async function cargarInventarioSilencioso() {
                     <td class="py-2.5 px-3 font-semibold text-white">${item.nombre_producto}</td>
                     <td class="py-2.5 px-3 font-mono text-slate-300">Est. ${item.estanteria} (F:${item.fila}, C:${item.columna})</td>
                     <td class="py-2.5 px-3 font-bold text-sky-400">${item.cantidad} u.</td>
-                    <td class="py-2.5 px-3 text-right">
+                    <td class="py-2.5 px-3 text-right space-x-2">
+                        <button onclick="activarLED('${item.estanteria}', ${item.fila}, ${item.columna})" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 rounded-lg text-xs font-bold transition-all" title="Encender LED físico">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </button>
                         <button onclick="eliminarUbicacion(${item.id_almacen})" class="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-lg text-xs font-bold transition-all">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -355,7 +361,12 @@ async function cargarTareas(idOperario) {
                 <tr class="hover:bg-slate-700/30 transition-colors">
                     <td class="py-3 px-4 font-mono text-emerald-400"><span class="text-amber-400 font-bold">[${t.id_lote}]</span> #${t.id_tarea}</td>
                     <td class="py-3 px-4 font-semibold text-white">${t.nombre_producto}</td>
-                    <td class="py-3 px-4 font-mono text-slate-300">Est. ${t.estanteria} (F:${t.fila}, C:${t.columna})</td>
+                    <td class="py-3 px-4 font-mono text-slate-300">
+                        Est. ${t.estanteria} (F:${t.fila}, C:${t.columna})
+                        <button onclick="activarLED('${t.estanteria}', ${t.fila}, ${t.columna})" class="ml-2 px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 rounded text-xs font-bold transition-all" title="Encender LED">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </button>
+                    </td>
                     <td class="py-3 px-4 font-bold text-amber-400">${t.cantidad_a_buscar} u. ${advertenciaStock}</td>
                     <td class="py-3 px-4 text-right">
                         <div class="flex flex-col space-y-2 items-end">
@@ -398,7 +409,12 @@ async function cargarTareasSilencioso(idOperario) {
                     <tr class="hover:bg-slate-700/30 transition-colors">
                         <td class="py-3 px-4 font-mono text-emerald-400"><span class="text-amber-400 font-bold">[${t.id_lote}]</span> #${t.id_tarea}</td>
                         <td class="py-3 px-4 font-semibold text-white">${t.nombre_producto}</td>
-                        <td class="py-3 px-4 font-mono text-slate-300">Est. ${t.estanteria} (F:${t.fila}, C:${t.columna})</td>
+                        <td class="py-3 px-4 font-mono text-slate-300">
+                            Est. ${t.estanteria} (F:${t.fila}, C:${t.columna})
+                            <button onclick="activarLED('${t.estanteria}', ${t.fila}, ${t.columna})" class="ml-2 px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 rounded text-xs font-bold transition-all" title="Encender LED">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </button>
+                        </td>
                         <td class="py-3 px-4 font-bold text-amber-400">${t.cantidad_a_buscar} u. ${advertenciaStock}</td>
                         <td class="py-3 px-4 text-right">
                             <div class="flex flex-col space-y-2 items-end">
@@ -447,5 +463,24 @@ async function completarTareaParcial(idTarea) {
         }
     } catch (error) {
         console.error("Error:", error);
+    }
+}
+
+// Envía la orden al backend para que el ESP8266/ESP32 la lea al consultar su estado
+async function activarLED(estanteria, fila, columna) {
+    try {
+        const respuesta = await fetch(`${API_URL}/api/led/trigger`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ estanteria, fila, columna, estado: "ON" })
+        });
+
+        if (respuesta.ok) {
+            console.log(`Señal LED enviada: Estantería ${estanteria}, Fila ${fila}, Columna ${columna}`);
+        } else {
+            console.warn("El servidor respondió pero no pudo registrar la orden del LED.");
+        }
+    } catch (error) {
+        console.error("Error al comunicarse con el controlador LED:", error);
     }
 }
