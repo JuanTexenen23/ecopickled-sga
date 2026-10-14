@@ -19,7 +19,6 @@ def inicializar_bd_si_no_existe():
     conn = sqlite3.connect("almacen.db")
     cursor = conn.cursor()
     
-    # Comprobar si la tabla operarios ya existe
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='operarios'")
     tabla_existe = cursor.fetchone()
     
@@ -68,7 +67,6 @@ def inicializar_bd_si_no_existe():
         conn.commit()
     conn.close()
 
-# Ejecutar la verificación e inicialización al arrancar el servidor
 inicializar_bd_si_no_existe()
 
 def obtener_conexion():
@@ -262,7 +260,6 @@ def completar_tarea(id_tarea: int):
     conn.close()
     return {"mensaje": "Tarea completada y stock actualizado", "alerta_cierre": mensaje_cierre}
 
-@cache = None # solo referencia
 @app.post("/api/operario/completar-parcial/{id_tarea}")
 def completar_tarea_parcial(id_tarea: int, datos: TareaIncompleta):
     conn = obtener_conexion()
